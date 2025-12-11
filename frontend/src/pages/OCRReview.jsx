@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useOcrStore } from "../store/ocrStore";
+import { useOcrStore } from '../store/ocrStore';
 
 export default function OCRReview() {
   const { mappedLines, rawText, setMappedLines } = useOcrStore();
