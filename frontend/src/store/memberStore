@@ -1,0 +1,28 @@
+import { create } from "zustand";
+
+export const useMemberStore = create((set) => ({
+  selectedMember: null,   
+  points: 0,              
+  tier: null,             
+
+  setSelectedMember: (member) =>
+    set({
+      selectedMember: member,
+      points: member?.points ?? 0,
+      tier: member?.tier ?? null,
+    }),
+
+  clearMember: () =>
+    set({
+      selectedMember: null,
+      points: 0,
+      tier: null,
+    }),
+
+  addPoints: (value) =>
+    set((state) => ({
+      points: state.points + value,
+    })),
+
+  setTier: (tier) => set({ tier }),
+}));
