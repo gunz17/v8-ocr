@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import axios from 'axios';
 
-// ✅ ต้องมีคำว่า export const นำหน้า
-export const useOcrStore = create((set, get) => ({
+// 1. สร้าง Store เก็บไว้ในตัวแปร
+const useOcrStore = create((set, get) => ({
   isUploading: false,
   uploadStatus: null,
   ocrResult: null,
@@ -14,8 +14,8 @@ export const useOcrStore = create((set, get) => ({
     formData.append('billImage', file);
 
     try {
-      // ยิงไปที่ Path นี้
-      const response = await axios.post('/api/ocr/upload', formData, {
+      // Hardcode URL ไปก่อน เพื่อความชัวร์ว่ายิงถูกที่
+      const response = await axios.post('http://localhost:3001/api/ocr/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
@@ -38,4 +38,6 @@ export const useOcrStore = create((set, get) => ({
   resetStore: () => set({ isUploading: false, uploadStatus: null, ocrResult: null, error: null })
 }));
 
-// ❌ อย่ามี export default useOcrStore; ตรงนี้ (ลบทิ้งไปเลย)
+// ✅ ไม้ตาย: ส่งออกทั้ง 2 แบบ (ใครเรียกแบบไหนก็เจอหมด)
+export { useOcrStore }; // สำหรับคนใช้ { }
+export default useOcrStore; // สำหรับคนไม่ใช้ { }

@@ -2,14 +2,17 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const { PORT, UPLOAD_DIR } = require('./config/env');
-const db = require('./db/sqlite');
+// const { PORT, UPLOAD_DIR } = require('./config/env'); // ❌ ลบบรรทัดนี้ทิ้ง หรือ Comment ไว้
 
-// Import Routes (เอา Comment ออกแล้ว)
+// ✅ ใส่ค่าตรงๆ ตรงนี้เลย (แก้ปัญหาหาตัวแปรไม่เจอ)
+const PORT = 3001;
+const UPLOAD_DIR = path.join(__dirname, '../uploads'); 
+
+const db = require('./db/sqlite');
 const ocrRoutes = require('./routes/ocr');
-// const posRoutes = require('./routes/pos'); // เดี๋ยวค่อยมาเปิดตอนทำ POS
 
 const app = express();
+// ... (โค้ดส่วนล่างเหมือนเดิม)
 
 app.use(cors());
 app.use(express.json());
