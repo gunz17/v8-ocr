@@ -1,38 +1,33 @@
-// backend/src/db/sqlite.js
-const sqlite3 = require("sqlite3").verbose();
-const path = require("path");
-const fs = require("fs");
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 
-const DB_PATH = path.join(__dirname, "gracie.db");
+// กำหนด path ของไฟล์ database (แก้ชื่อไฟล์ได้ตามต้องการ)
+const dbPath = path.resolve(__dirname, '../../database.db'); 
 
-let db;
+// สร้าง Connection
+const db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+        console.error('❌ Database Connection Error:', err.message);
+    } else {
+        console.log('✅ Connected to SQLite database at:', dbPath);
+    }
+});
 
-function initDB() {
-  const exists = fs.existsSync(DB_PATH);
+// สร้างตารางถ้ายังไม่มี (Table Init)
+db.serialize(() => {
+    db.run(`CREATE TABLE IF NOT EXISTS ocr_uploads (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        filename TEXT,
+        original_name TEXT,
+        file_path TEXT,
+        status TEXT DEFAULT 'pending',
+        raw_text TEXT,
+        result_json TEXT,
+        error_message TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+});
 
-  db = new sqlite3.Database(DB_PATH, (err) => {
-    if (err) throw err;
-    console.log("✔ SQLite DB connected");
-  });
-
-  if (!exists) {
-    const schema = fs.readFileSync(
-      path.join(__dirname, "schema.sql"),
-      "utf8"
-    );
-    db.exec(schema);
-    console.log("✔ DB Schema created");
-
-    const seed = fs.readFileSync(path.join(__dirname, "seed.sql"), "utf8");
-    db.exec(seed);
-    console.log("✔ DB Seed populated");
-  }
-
-  return db;
-}
-
-function getDB() {
-  return db;
-}
-
-module.exports = { initDB, getDB };
+// สำคัญมาก: ต้อง export ตัว db ออกไปตรงๆ
+module.exports = db;
