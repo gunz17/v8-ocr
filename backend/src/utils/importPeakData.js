@@ -1,17 +1,25 @@
 const fs = require('fs');
 const path = require('path');
-const db = require('../db/sqlite');
+const sqlite3 = require('sqlite3').verbose(); // เรียก sqlite3 โดยตรง
 const XLSX = require('xlsx');
 
-// 📂 ระบุตำแหน่งไฟล์ Excel
+// 📂 กำหนดตำแหน่งไฟล์ Database และ Excel ให้แม่นยำ
+const DB_PATH = path.resolve(__dirname, '../../database.sqlite');
 const IMPORT_DIR = path.resolve(__dirname, '../../imports');
+
 const FILES = {
     PRODUCTS: path.join(IMPORT_DIR, 'products.xlsx'),
     CONTACTS: path.join(IMPORT_DIR, 'contacts.xlsx'),
     ACCOUNTS: path.join(IMPORT_DIR, 'accounts.xlsx')
 };
 
-// ✅ ฟังก์ชันรัน SQL ทีละคำสั่ง (ใช้ db.run แทน exec)
+// ✅ สร้างการเชื่อมต่อ Database เฉพาะกิจสำหรับสคริปต์นี้
+const db = new sqlite3.Database(DB_PATH, (err) => {
+    if (err) console.error('❌ DB Connection Error:', err.message);
+    else console.log('✅ Connected to Database at:', DB_PATH);
+});
+
+// ฟังก์ชันรัน SQL ทีละคำสั่ง
 const runQuery = (sql, params = []) => {
     return new Promise((resolve, reject) => {
         db.run(sql, params, (err) => {
@@ -42,7 +50,7 @@ const findHeaderRow = (sheet) => {
     return 0;
 };
 
-// 🏗️ ฟังก์ชันสร้างตาราง (Init Schema)
+// 🏗️ สร้างตาราง (Init Schema)
 const initTables = async () => {
     console.log('🏗️ Creating Tables...');
     
@@ -171,10 +179,12 @@ const importData = async () => {
 // เริ่มทำงาน
 const run = async () => {
     try {
-        await initTables(); // สร้างตารางก่อน
-        await importData(); // แล้วค่อยนำเข้าข้อมูล
+        await initTables(); 
+        await importData(); 
     } catch (error) {
         console.error('🔥 Fatal Error:', error);
+    } finally {
+        db.close(); // ปิดการเชื่อมต่อเมื่อเสร็จ
     }
 };
 
