@@ -4,3 +4,4 @@ node_modules
 *.sqlite
 .DS_Store
 backend/src/config/google_ocr_key.json
+backend/google-credentials.json

@@ -2,6 +2,9 @@ const db = require('../db/sqlite');
 const ocrService = require('../services/ocrService');
 const mappingEngine = require('../ai/mappingEngine'); 
 
+// ==========================================
+// 1. ฟังก์ชันรับไฟล์ Upload (POST)
+// ==========================================
 exports.handleUpload = (req, res) => {
     // 1. Validation
     if (!req.file) {
@@ -21,7 +24,7 @@ exports.handleUpload = (req, res) => {
             return res.status(500).json({ error: err.message });
         }
 
-        // 'this.lastID' คือ ID ของ row ที่เพิ่ง insert (เฉพาะใน function callback แบบปกติ ไม่ใช่ arrow func)
+        // 'this.lastID' คือ ID ของ row ที่เพิ่ง insert
         const uploadId = this.lastID;
 
         // 3. Response ทันที
@@ -31,12 +34,56 @@ exports.handleUpload = (req, res) => {
             uploadId: uploadId
         });
 
-        // 4. Background Task
+        // 4. Background Task (เริ่ม AI)
         processOCRInBackground(uploadId, file.path);
     });
 };
 
-// ฟังก์ชัน Background Worker
+// ==========================================
+// 2. ฟังก์ชันดึงผลลัพธ์ (GET) - *ตัวที่ Error ว่าหายไป*
+// ==========================================
+exports.getResult = (req, res) => {
+    const id = req.params.id;
+
+    if (!id) {
+        return res.status(400).json({ error: 'Missing ID' });
+    }
+
+    const sql = "SELECT * FROM ocr_uploads WHERE id = ?";
+    
+    db.get(sql, [id], (err, row) => {
+        if (err) {
+            console.error('❌ Database Fetch Error:', err);
+            return res.status(500).json({ error: err.message });
+        }
+
+        if (!row) {
+            return res.status(404).json({ error: 'Job not found' });
+        }
+
+        // แปลง JSON string ใน DB กลับมาเป็น Object
+        let resultData = null;
+        if (row.result_json) {
+            try {
+                resultData = JSON.parse(row.result_json);
+            } catch (e) {
+                resultData = row.result_json;
+            }
+        }
+
+        res.json({
+            id: row.id,
+            status: row.status, 
+            data: resultData,
+            raw_text: row.raw_text,
+            error: row.error_message
+        });
+    });
+};
+
+// ==========================================
+// 3. ฟังก์ชันเบื้องหลัง (Background Worker)
+// ==========================================
 async function processOCRInBackground(uploadId, filePath) {
     console.log(`⚡ [Background] Starting OCR for ID: ${uploadId}`);
     
@@ -44,7 +91,8 @@ async function processOCRInBackground(uploadId, filePath) {
         // Update Status -> Processing
         updateStatus(uploadId, 'processing');
 
-        // Call OCR
+        // Call OCR Service
+        // (ต้องแน่ใจว่าไฟล์ ocrService.js มีฟังก์ชัน extractText)
         const rawText = await ocrService.extractText(filePath);
         
         // Call AI Mapping
@@ -70,45 +118,4 @@ async function processOCRInBackground(uploadId, filePath) {
 // Helper function to update status
 function updateStatus(id, status) {
     db.run("UPDATE ocr_uploads SET status = ? WHERE id = ?", [status, id]);
-    // ... โค้ดเดิมด้านบน ...
-
-// ✅ ฟังก์ชันสำหรับดึงผลลัพธ์ (Polling)
-exports.getResult = (req, res) => {
-    const id = req.params.id;
-
-    if (!id) {
-        return res.status(400).json({ error: 'Missing ID' });
-    }
-
-    const sql = "SELECT * FROM ocr_uploads WHERE id = ?";
-    
-    db.get(sql, [id], (err, row) => {
-        if (err) {
-            console.error('❌ Database Fetch Error:', err);
-            return res.status(500).json({ error: err.message });
-        }
-
-        if (!row) {
-            return res.status(404).json({ error: 'Job not found' });
-        }
-
-        // แปลง JSON string ใน DB กลับมาเป็น Object เพื่อส่งให้หน้าบ้าน
-        let resultData = null;
-        if (row.result_json) {
-            try {
-                resultData = JSON.parse(row.result_json);
-            } catch (e) {
-                resultData = row.result_json; // กรณี parse ไม่ได้ ให้ส่งเป็น string เดิม
-            }
-        }
-
-        res.json({
-            id: row.id,
-            status: row.status, // pending, processing, completed, failed
-            data: resultData,   // ข้อมูล JSON ที่ AI ทำเสร็จแล้ว
-            raw_text: row.raw_text,
-            error: row.error_message
-        });
-    });
-};
 }
