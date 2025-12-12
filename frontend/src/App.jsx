@@ -1,33 +1,31 @@
-import React from "react";
-import OCRUpload from "./pages/OCRUpload";
-import OCRReview from "./pages/OCRReview";
-import MappingManager from "./pages/MappingManager";
-import POSPage from "./pages/POSPage";
-import StockSync from "./pages/StockSync";
-import PeakExport from "./pages/PeakExport";
+import React from 'react';
+import { Routes, Route, Link } from 'react-router-dom';
 
-export default function App() {
-  const [page, setPage] = React.useState("ocr");
+// Import หน้าจอต่างๆ
+import OCRUpload from './pages/OCRUpload';
+import OCRReview from './pages/OCRReview';
+// import POS from './pages/POS'; // (ไว้เปิดทีหลัง)
+// import StockSync from './pages/StockSync'; // (ไว้เปิดทีหลัง)
+// import PeakExport from './pages/PeakExport'; // (ไว้เปิดทีหลัง)
 
+function App() {
   return (
-    <div style={{ padding: 20 }}>
-      <h1>Gracie OCR Console V8</h1>
-
-      <nav style={{ marginBottom: 20 }}>
-        <button onClick={() => setPage("ocr")}>OCR Upload</button>
-        <button onClick={() => setPage("review")}>OCR Review</button>
-        <button onClick={() => setPage("mapping")}>Mapping Manager</button>
-        <button onClick={() => setPage("pos")}>POS</button>
-        <button onClick={() => setPage("stock")}>Stock Sync</button>
-        <button onClick={() => setPage("peak")}>PEAK Export</button>
+    <div className="app-container">
+      {/* 🟢 เมนูนำทางด้านบน */}
+      <nav style={{ padding: '15px', background: '#333', color: 'white', marginBottom: '20px' }}>
+        <h2 style={{ margin: 0, display: 'inline-block', marginRight: '20px' }}>Gracie OCR Console V8</h2>
+        <Link to="/" style={{ color: 'white', marginRight: '15px', textDecoration: 'none' }}>OCR Upload</Link>
+        <Link to="/review" style={{ color: 'white', marginRight: '15px', textDecoration: 'none' }}>OCR Review</Link>
+        {/* <Link to="/pos" style={{ color: '#aaa', marginRight: '15px' }}>POS (Coming Soon)</Link> */}
       </nav>
 
-      {page === "ocr" && <OCRUpload />}
-      {page === "review" && <OCRReview />}
-      {page === "mapping" && <MappingManager />}
-      {page === "pos" && <POSPage />}
-      {page === "stock" && <StockSync />}
-      {page === "peak" && <PeakExport />}
+      {/* 🟢 ส่วนแสดงผลหน้าจอ (เปลี่ยนไปตาม URL) */}
+      <Routes>
+        <Route path="/" element={<OCRUpload />} />
+        <Route path="/review" element={<OCRReview />} />
+      </Routes>
     </div>
   );
 }
+
+export default App;

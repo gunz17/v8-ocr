@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // <--- เพิ่มบรรทัดนี้
 import { useOcrStore } from '../store/ocrStore'; // ✅ ต้องมีปีกกา { } แบบนี้
 
 const OCRUpload = () => {
@@ -16,6 +17,8 @@ const OCRUpload = () => {
     const fileInput = document.getElementById('fileInput');
     if (fileInput.files.length > 0) {
       await uploadBill(fileInput.files[0]);
+      // ✅ เพิ่มบรรทัดนี้ต่อท้าย เพื่อให้เด้งไปหน้า Review
+  navigate('/review');
     } else {
       alert("Please select a file first!");
     }
