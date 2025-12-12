@@ -11,16 +11,29 @@ const FILES = {
     ACCOUNTS: path.join(IMPORT_DIR, 'accounts.xlsx')
 };
 
-// ฟังก์ชันหาบรรทัด Header อัตโนมัติ
+// ✅ ฟังก์ชันรัน SQL ทีละคำสั่ง (ใช้ db.run แทน exec)
+const runQuery = (sql, params = []) => {
+    return new Promise((resolve, reject) => {
+        db.run(sql, params, (err) => {
+            if (err) {
+                console.error('❌ SQL Error:', err.message);
+                reject(err);
+            } else {
+                resolve();
+            }
+        });
+    });
+};
+
+// ฟังก์ชันหา Header อัตโนมัติ
 const findHeaderRow = (sheet) => {
     if (!sheet['!ref']) return 0;
     const range = XLSX.utils.decode_range(sheet['!ref']);
-    for (let R = range.s.r; R <= Math.min(range.e.r, 20); R++) { // หาแค่ 20 บรรทัดแรกพอ
+    for (let R = range.s.r; R <= Math.min(range.e.r, 20); R++) {
         for (let C = range.s.c; C <= range.e.c; C++) {
             const cell = sheet[XLSX.utils.encode_cell({ r: R, c: C })];
             if (!cell) continue;
             const text = String(cell.v).trim();
-            // คำค้นหาหัวตาราง (ไทย/อังกฤษ)
             if (['รหัสสินค้า', 'Product Code', 'รหัสผู้ติดต่อ', 'Contact Code', 'รหัสบัญชี', 'Account Code'].includes(text)) {
                 return R;
             }
@@ -29,13 +42,55 @@ const findHeaderRow = (sheet) => {
     return 0;
 };
 
-const runQuery = (sql, params) => new Promise((resolve, reject) => {
-    db.run(sql, params, (err) => err ? reject(err) : resolve());
-});
+// 🏗️ ฟังก์ชันสร้างตาราง (Init Schema)
+const initTables = async () => {
+    console.log('🏗️ Creating Tables...');
+    
+    const tables = [
+        `CREATE TABLE IF NOT EXISTS peak_products (
+            code TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            sell_price REAL DEFAULT 0,
+            buy_price REAL DEFAULT 0,
+            unit TEXT,
+            description TEXT
+        )`,
+        `CREATE TABLE IF NOT EXISTS peak_contacts (
+            contact_code TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            tax_id TEXT,
+            address TEXT,
+            branch_code TEXT DEFAULT '00000'
+        )`,
+        `CREATE TABLE IF NOT EXISTS peak_accounts (
+            account_code TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            category TEXT
+        )`,
+        `CREATE TABLE IF NOT EXISTS product_mappings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ocr_name TEXT NOT NULL UNIQUE,
+            peak_code TEXT,
+            confidence_score REAL,
+            conversion_rate REAL DEFAULT 1,
+            last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(peak_code) REFERENCES peak_products(code)
+        )`,
+        `CREATE TABLE IF NOT EXISTS vendor_configs (
+            vendor_tax_id TEXT PRIMARY KEY,
+            peak_contact_code TEXT,
+            default_payment_account TEXT,
+            default_vat_type TEXT DEFAULT '1'
+        )`
+    ];
+
+    for (const sql of tables) {
+        await runQuery(sql);
+    }
+    console.log('✅ Tables Created.');
+};
 
 const importData = async () => {
-    console.log('🚀 Starting PEAK Data Import...');
-
     // 1. Import Products
     if (fs.existsSync(FILES.PRODUCTS)) {
         console.log('📦 Importing Products...');
@@ -59,6 +114,8 @@ const importData = async () => {
             }
         }
         console.log(`✅ Imported ${data.length} products.`);
+    } else {
+        console.log('⚠️ Product file not found:', FILES.PRODUCTS);
     }
 
     // 2. Import Contacts
@@ -108,13 +165,17 @@ const importData = async () => {
         console.log(`✅ Imported ${data.length} accounts.`);
     }
     
-    console.log('🎉 All Imports Completed!');
+    console.log('🎉 ALL DATA IMPORTED SUCCESSFULLY!');
 };
 
-// Re-create Schema & Run
-const schemaPath = path.join(__dirname, '../db/schema.sql');
-const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-db.exec(schemaSql, (err) => {
-    if (err) console.error('Schema Error:', err);
-    else importData();
-});
+// เริ่มทำงาน
+const run = async () => {
+    try {
+        await initTables(); // สร้างตารางก่อน
+        await importData(); // แล้วค่อยนำเข้าข้อมูล
+    } catch (error) {
+        console.error('🔥 Fatal Error:', error);
+    }
+};
+
+run();
